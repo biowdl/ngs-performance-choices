@@ -163,7 +163,49 @@ sorting and should therefore not be considered.
 
 How much threads should be used?
 --------------------------------
-???
+Samtools works with additional threads.
+
+0
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@0 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@0 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'
+      Time (mean ± σ):     42.022 s ±  0.319 s    [User: 38.012 s, System: 1.860 s]
+      Range (min … max):   41.720 s … 42.539 s    5 runs
+
+1
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@0 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@0 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'
+      Time (mean ± σ):     42.022 s ±  0.319 s    [User: 38.012 s, System: 1.860 s]
+      Range (min … max):   41.720 s … 42.539 s    5 runs
+
+
+2
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@2 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@2 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'
+      Time (mean ± σ):     23.124 s ±  0.244 s    [User: 41.531 s, System: 3.432 s]
+      Range (min … max):   22.764 s … 23.355 s    5 runs
+
+3
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@3 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@3 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'
+      Time (mean ± σ):     19.528 s ±  1.319 s    [User: 43.423 s, System: 3.657 s]
+      Range (min … max):   18.475 s … 21.207 s    5 runs
+
+
+Using additional threads decreases the wall clock time but increases the total
+CPU time. Since the samtools program will be used in a pipe with an alignment
+program it is best to use ``-@0`` to prevent overhead.
 
 How much memory should be used?
 -------------------------------
@@ -176,7 +218,17 @@ All sorting tools work in the following way:
 If the sorting tool can hold the entire BAM into memory then no disk I/O is 
 needed, giving significantly better performance.
 
-The percentage 
+When the BAM file is bigger than the in-memory buffer, part of it will be
+written to disk. In WGS the BAM file to be sorted is usually very big.
+160GB for a level 1 compressed BAM file is not uncommon. Sorting this file
+with a 4GB in-memory buffer will create ~150 ~1GB temporary files (these are
+compressed 4GB bam files).
+
+Increasing memory does only affect the number of temporary files written. The
+number of temporary files does not have a significant impact on the time as
+most of the time is spent sorting. The number of temporary files written is
+important, is the maximum number of open file handles may be reached.
+Using a default in the 2-4GB range seems reasonable for sorting WGS BAM data.
 
 When should the bam be sorted?
 ------------------------------
