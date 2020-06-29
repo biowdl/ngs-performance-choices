@@ -47,7 +47,53 @@ which compression level to use?
 There are several zlib compression levels, from 1 to 9. Alternatively a file
 can not be compressed. Should a file be compressed, and if so, at which level?
 
- 
+Multithreading
+++++++++++++++
+
+Multithreading is a programming technique that allows a program to split up
+its execution in multiple independent threads that allow for parallel execution
+on the CPU.
+
+Advantages:
+
++ More efficient use of resources (less CPU's in idle state)
++ Significant decrease in wall clock time if used correctly.
+
+Disadvantages:
+
++ Performance overhead compared to single-threaded algorithms
++ More complex code required
+
+When threads share resources some conditions
+must be satisfied to ensure the threads don't alter the shared resource at
+the same time (race condition) or wait on each other to change the resource
+and therefore never changing it (deadlock). Taking care these problems is
+what makes the code more complex and comes with a performance penalty.
+
+Some algorithms come with a very small performance overhead with regards to
+multithreading some with a much bigger one.
+
+How much threads should be used?
+--------------------------------
+Given the overhead of using more than one thread, the default should be one
+thread. Situations in which more threads can be considered are:
+
++ A reduction in wall clock time is required or desirable
++ A program is bottlenecking other applications
++ Using a program in single-threaded mode will leave resources idle.
+
+Examples:
+
++ When time is no object, it may be cheaper to use one thread per task on cloud
+  backends. This will decrease the amount of CPU time needed.
++ On clinical pipelines, getting the diagnose one day earlier may be worth more
+  than computational overhead.
++ The program is used in a pipe and other programs spend a lot of time waiting
+  on it.
++ mapping/alignment tools require a lot of memory for the index, but
+  not much additional memory per thread. On a node that has 16 GB and 4 threads
+  it is more efficient to use all 4 threads and 16 GB of ram, than to use 12
+  GB of ram on one thread.
 
 Sorting tools
 +++++++++++++
