@@ -268,8 +268,8 @@ For testing the samtools sorted test.bam was used.
 
 .. code-block::
 
-    hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 0 -l 1 test.bam markdup.bam"
-    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 0 -l 1 test.bam markdup.bam
+    hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 1 -l 1 test.bam markdup.bam"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 1 -l 1 test.bam markdup.bam
       Time (mean ± σ):     86.467 s ±  0.567 s    [User: 83.899 s, System: 1.494 s]
       Range (min … max):   86.023 s … 87.431 s    5 runs
 
@@ -291,5 +291,61 @@ to get smaller files?
 Compression level 3 generates files of 742M which is close enough to the 766
 by sambamba. Also in compute time (84 vs 89) seconds both are similar.
 
+For comparison here is picard's execution time with default settings.
+
+.. code-block::
+
+    $ hyperfine -r 2 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=5 METRICS_FILE=markdup.metrics'
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=5 METRICS_FILE=markdup.metrics
+      Time (mean ± σ):     103.899 s ±  0.180 s    [User: 111.700 s, System: 1.445 s]
+      Range (min … max):   103.772 s … 104.026 s    2 runs
+
+
 But sambamba has a multithreaded advantage. How does it scale?
 
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 1 -l 1 test.bam markdup.bam"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 1 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     87.504 s ±  0.489 s    [User: 84.816 s, System: 1.547 s]
+      Range (min … max):   86.847 s … 88.011 s    5 runs
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 2 -l 1 test.bam markdup.bam"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 2 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     51.343 s ±  0.312 s    [User: 87.543 s, System: 1.984 s]
+      Range (min … max):   50.995 s … 51.812 s    5 runs
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 3 -l 1 test.bam markdup.bam"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 3 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     42.527 s ±  0.287 s    [User: 95.170 s, System: 2.402 s]
+      Range (min … max):   42.220 s … 42.943 s    5 runs
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 4 -l 1 test.bam markdup.bam"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 4 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     37.447 s ±  0.494 s    [User: 99.267 s, System: 2.478 s]
+      Range (min … max):   37.000 s … 38.188 s    5 runs
+
+Sambamba uses some threads effectively to its advantage, however diminishing
+returns hit quickly. At 4 threads CPU time/ wall clock time is less than 3. Meaning
+that 1 thread is not sufficiently utilized.
+
+Maybe the scaling gets better when using better compression?
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 4 -l 4 test.bam markdup.bam"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 4 -l 4 test.bam markdup.bam
+      Time (mean ± σ):     43.028 s ±  0.428 s    [User: 118.324 s, System: 2.617 s]
+      Range (min … max):   42.612 s … 43.727 s    5 runs
+
+CPU time/ wall clock time is still less than 3. So it is not possible to fully
+utilize the 4 threads. Requiring heavier compression does not increase
+thread utilization.
+
+
+Conclusion
+..........
+Using sambamba markdup at 2 or 3 threads seems to be a very efficient way
+of diminishing the time spent on markdup. Also lowering the default compression
+level of 5 to 1 on picard halfs the execution time. But that has the
+disadvantage of a fairly big file size.
