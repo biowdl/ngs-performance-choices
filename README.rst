@@ -106,7 +106,8 @@ settings and MAX_RECORDS_IN_RAM were set to low levels to simulate a
 WGS scenario where the resulting files are so big they cannot possible kept in
 memory and need to be split in multiple files.
 
-Testing results:
+Test results
+............
 
 Samtools sort and samtools index were run in the same run because sambamba and
 picard can index on the fly. So indexing needs to be done as well for fair 
@@ -241,4 +242,54 @@ entire bam file to disk twice. To not use a pipe from the aligner will increase
 that to three times. Also additional time will be needed to compress and 
 decompress the file from disk.
 
+Marking duplicates
+++++++++++++++++++
+
+Which program should be used?
+-----------------------------
+
+Samtools, picard and sambamba can all mark duplicate reads. Samtools
+requires a more complex pipeline. GATK may have some requirements on how the
+duplicates are marked. Therefore ``picard MarkDuplicates`` is a good candidate
+as well as ``sambamba markdup`` which promises to work according to the
+picard criteria.
+
+Test results
+............
+
+For testing the samtools sorted test.bam was used.
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=1 METRICS_FILE=markdup.metrics'
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=1 METRICS_FILE=markdup.metrics
+      Time (mean ± σ):     51.616 s ±  0.325 s    [User: 59.094 s, System: 1.549 s]
+      Range (min … max):   51.168 s … 51.959 s    5 runs
+
+.. code-block::
+
+    hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 0 -l 1 test.bam markdup.bam"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 0 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     86.467 s ±  0.567 s    [User: 83.899 s, System: 1.494 s]
+      Range (min … max):   86.023 s … 87.431 s    5 runs
+
+
+Sambamba requires more CPU seconds 84 vs 59 for picard. But, the Picard file
+is significantly bigger 960M vs 766M. That's a big difference, especially when
+handling big WGS files. This can be multiple gigabytes.
+
+Further investigation is needed. How much compute time is needed for picard
+to get smaller files?
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=3 METRICS_FILE=markdup.metrics'
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=3 METRICS_FILE=markdup.metrics
+      Time (mean ± σ):     81.179 s ±  0.395 s    [User: 89.123 s, System: 1.453 s]
+      Range (min … max):   80.819 s … 81.840 s    5 runs
+
+Compression level 3 generates files of 742M which is close enough to the 766
+by sambamba. Also in compute time (84 vs 89) seconds both are similar.
+
+But sambamba has a multithreaded advantage. How does it scale?
 
