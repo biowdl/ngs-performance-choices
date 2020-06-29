@@ -22,31 +22,6 @@ For benchmarking [hyperfine](https://github.com/sharkdp/hyperfine) was used.
 This command line tool is useful as it can perform warmup runs to ensure 
 images are downloaded and disk caches are full.
 
-Compression and compression levels
-++++++++++++++++++++++++++++++++++
-
-Compression tools
------------------
-The bioinformatics world seems to have standardised on `zlib
-<https://www.zlib.net/>`_. Most bioinformatics tools can open ``.gz`` files and
-output to them. Therefore tools that implement zlib should be used for
-compressing files.
-
-Not all zlib implementations are created equal.
-The most well-known zlib implementation is `gzip <http://www.gzip.org/>`_. Gzip
-is very old and is written as a single-threaded algorithm. Another 
-implementation is `pigz <http://zlib.net/pigz/>`_, which was written to make use
-of multiple threads. Pigz is **always** faster than gzip. Even on a single core
-the algorithm is simply more efficient. ``pigz -p 1`` (no multithreading) beats
-``gzip`` in both compression and decompression. [Cutadapt](
-https://github.com/marcelm/cutadapt) therefore does its compression and 
-decompression with pigz.
-
-which compression level to use?
--------------------------------
-There are several zlib compression levels, from 1 to 9. Alternatively a file
-can not be compressed. Should a file be compressed, and if so, at which level?
-
 Multithreading
 ++++++++++++++
 
@@ -94,6 +69,31 @@ Examples:
   not much additional memory per thread. On a node that has 16 GB and 4 threads
   it is more efficient to use all 4 threads and 16 GB of ram, than to use 12
   GB of ram on one thread.
+
+Compression and compression levels
+++++++++++++++++++++++++++++++++++
+
+Compression tools
+-----------------
+The bioinformatics world seems to have standardised on `zlib
+<https://www.zlib.net/>`_. Most bioinformatics tools can open ``.gz`` files and
+output to them. Therefore tools that implement zlib should be used for
+compressing files.
+
+Not all zlib implementations are created equal.
+The most well-known zlib implementation is `gzip <http://www.gzip.org/>`_. Gzip
+is very old and is written as a single-threaded algorithm. Another
+implementation is `pigz <http://zlib.net/pigz/>`_, which was written to make use
+of multiple threads. Pigz is **always** faster than gzip. Even on a single core
+the algorithm is simply more efficient. ``pigz -p 1`` (no multithreading) beats
+``gzip`` in both compression and decompression. [Cutadapt](
+https://github.com/marcelm/cutadapt) therefore does its compression and
+decompression with pigz.
+
+which compression level to use?
+-------------------------------
+There are several zlib compression levels, from 1 to 9. Alternatively a file
+can not be compressed. Should a file be compressed, and if so, at which level?
 
 Sorting tools
 +++++++++++++
