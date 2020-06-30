@@ -349,3 +349,30 @@ Using sambamba markdup at 2 or 3 threads seems to be a very efficient way
 of diminishing the time spent on markdup. Also lowering the default compression
 level of 5 to 1 on picard halfs the execution time. But that has the
 disadvantage of a fairly big file size.
+
+Merging BAM files
++++++++++++++++++
+
+Which program should be used
+-----------------------------
+Samtools, sambamba and picard all provide tools for merging several sorted
+bam files together.
+
+Two test BAMs with each 5 million reads were generated. The test BAMs were
+distinct from each other. Both BAM files were sorted using samtools.
+
+Test results
+............
+
+.. code-block::
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools merge -f -l1 -@0 merged.bam test.bam test2.bam && samtools index merged.bam'"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools merge -f -l1 -@0 merged.bam test.bam test2.bam && samtools index merged.bam'
+      Time (mean ± σ):     45.746 s ±  0.223 s    [User: 42.968 s, System: 1.143 s]
+      Range (min … max):   45.547 s … 46.012 s    5 runs
+
+.. code-block::
+    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba merge -l1 -t0 merged.bam test.bam test2.bam"
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba merge -l1 -t0 merged.bam test.bam test2.bam
+      Time (mean ± σ):     91.850 s ±  1.192 s    [User: 87.480 s, System: 2.778 s]
+      Range (min … max):   90.252 s … 93.187 s    5 runs
+
