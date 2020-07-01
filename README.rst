@@ -420,12 +420,14 @@ Test results
 ............
 
 .. code-block::
+
     $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools merge -f -l1 -@0 merged.bam test.bam test2.bam && samtools index merged.bam'"
     Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools merge -f -l1 -@0 merged.bam test.bam test2.bam && samtools index merged.bam'
       Time (mean ± σ):     45.746 s ±  0.223 s    [User: 42.968 s, System: 1.143 s]
       Range (min … max):   45.547 s … 46.012 s    5 runs
 
 .. code-block::
+
     $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba merge -l1 -t0 merged.bam test.bam test2.bam"
     Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba merge -l1 -t0 merged.bam test.bam test2.bam
       Time (mean ± σ):     91.850 s ±  1.192 s    [User: 87.480 s, System: 2.778 s]
