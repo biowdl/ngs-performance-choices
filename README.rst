@@ -90,10 +90,65 @@ the algorithm is simply more efficient. ``pigz -p 1`` (no multithreading) beats
 https://github.com/marcelm/cutadapt) therefore does its compression and
 decompression with pigz.
 
+Why pigz:
+
+.. code-block::
+
+    $ hyperfine -w 3 -r 10 "gzip -1 -c big.fastq > /dev/null"
+    Benchmark #1: gzip -1 -c big.fastq > /dev/null
+      Time (mean ± σ):     22.335 s ±  0.284 s    [User: 22.123 s, System: 0.202 s]
+      Range (min … max):   21.963 s … 22.890 s    10 runs
+
+    $ hyperfine -w 3 -r 10 "pigz -p 1 -1 -c big.fastq > /dev/null"
+    Benchmark #1: pigz -p 1 -1 -c big.fastq > /dev/null
+      Time (mean ± σ):     19.343 s ±  0.225 s    [User: 19.085 s, System: 0.243 s]
+      Range (min … max):   19.093 s … 19.737 s    10 runs
+
+    $ hyperfine -w 3 -r 10 "gzip -cd big.fastq.gz > /dev/null"
+    Benchmark #1: gzip -cd big.fastq.gz > /dev/null
+      Time (mean ± σ):     10.363 s ±  0.086 s    [User: 10.274 s, System: 0.059 s]
+      Range (min … max):   10.217 s … 10.471 s    10 runs
+
+    $ hyperfine -w 3 -r 10 "pigz -p 1  -cd big.fastq.gz > /dev/null"
+    Benchmark #1: pigz -p 1  -cd big.fastq.gz > /dev/null
+      Time (mean ± σ):      6.196 s ±  0.037 s    [User: 6.134 s, System: 0.053 s]
+      Range (min … max):    6.132 s …  6.250 s    10 runs
+
+Pigz is more than 10% faster when compressing and more than 40 % (!!!) faster
+when decompressing.
+
 which compression level to use?
 -------------------------------
 There are several zlib compression levels, from 1 to 9. Alternatively a file
 can not be compressed. Should a file be compressed, and if so, at which level?
+
+Compression was done using ``pigz -p 1``
+
+============ ================ ========= ============= =============
+level        time (seconds)   size      relative time relative size
+============ ================ ========= ============= =============
+uncompressed 0.914            2,3G      0.05          4.44
+1            19.770           513M      1.00          1.00
+2            21.713           496M      1.10          0.97
+3            30.370           467M      1.54          0.91
+4            28.196           465M      1.43          0.91
+5            47.708           446M      2.41          0.87
+6            108.467          402M      5.49          0.78
+7            174.239          386M      8.81          0.75
+8            220.316          383M      11.14         0.75
+9            223.419          383M      11.30         0.75
+============ ================ ========= ============= =============
+
+The used data was quite repetitive so might not have been a best benchmark for
+the highest compression levels. What we see is that anything above compression
+level 1 uses disproportionally more compute time for the benefits it gives.
+Compression level 4 might be worth it but takes 43% compute time for a 9%
+smaller filesize.
+
+The default compression should be level 1. What we see in for example ``Picard
+Markduplicates`` is that the execution time is halved when compression level
+is set from 5 (default) to 1.
+
 
 Sorting tools
 +++++++++++++
