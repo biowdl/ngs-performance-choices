@@ -333,18 +333,32 @@ Sambamba requires more CPU seconds 84 vs 59 for picard. But, the Picard file
 is significantly bigger 960M vs 766M. That's a big difference, especially when
 handling big WGS files. This can be multiple gigabytes.
 
-Further investigation is needed. How much compute time is needed for picard
-to get smaller files?
+Picard uses the intel deflater by default which gives very large files for
+compression level 1. We can also use the jdk deflater which should yield the
+same filesize as sambamba.
 
 .. code-block::
 
-    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=3 METRICS_FILE=markdup.metrics'
-    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=3 METRICS_FILE=markdup.metrics
-      Time (mean ± σ):     81.179 s ±  0.395 s    [User: 89.123 s, System: 1.453 s]
-      Range (min … max):   80.819 s … 81.840 s    5 runs
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=1 METRICS_FILE=markdup.metrics USE_JDK_INFLATER=true USE_JDK_DEFLATER=true' && du -h markdup.bam
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=1 METRICS_FILE=markdup.metrics USE_JDK_INFLATER=true USE_JDK_DEFLATER=true
+      Time (mean ± σ):     65.913 s ±  0.449 s    [User: 73.844 s, System: 1.458 s]
+      Range (min … max):   65.480 s … 66.503 s    5 runs
 
-Compression level 3 generates files of 742M which is close enough to the 766
-by sambamba. Also in compute time (84 vs 89) seconds both are similar.
+
+This generates files of 765M which is virtually the same as the 766M
+by sambamba. But compute time  for picard (74 vs 89) is better.
+
+If you feel better using the intel deflater and inflater compression level 2
+yields similar results.
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=2 METRICS_FILE=markdup.metrics USE_JDK_DEFLATER=true' && du -h markdup.bam
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=2 METRICS_FILE=markdup.metrics USE_JDK_DEFLATER=true
+      Time (mean ± σ):     68.826 s ±  0.253 s    [User: 76.825 s, System: 1.342 s]
+      Range (min … max):   68.551 s … 69.171 s    5 runs
+
+It is slightly slower 77 vs 74 seconds with a slightly smaller bam file 753M vs 765M.
 
 For comparison here is picard's execution time with default settings.
 
@@ -355,6 +369,7 @@ For comparison here is picard's execution time with default settings.
       Time (mean ± σ):     103.899 s ±  0.180 s    [User: 111.700 s, System: 1.445 s]
       Range (min … max):   103.772 s … 104.026 s    2 runs
 
+Which generates a bam file of 711M.
 
 But sambamba has a multithreaded advantage. How does it scale?
 
@@ -400,10 +415,31 @@ thread utilization.
 
 Conclusion
 ..........
-Using sambamba markdup at 2 or 3 threads seems to be a very efficient way
-of diminishing the time spent on markdup. Also lowering the default compression
-level of 5 to 1 on picard halfs the execution time. But that has the
-disadvantage of a fairly big file size.
+Using picard with compression level 1 and defaults will yield a very big file
+which is undesirable. When the jdk deflater is utilized the file size is
+similar to sambamba and we can make an apples-to-apples comparison.
+
+When utilizing a single core picard is most efficient with 74 seconds vs 84 for
+sambamba. Sambamba can use more cores however and finish in a wall clock time
+of 51 seconds when utilizing 2 cores. Beyond that it does not scale well.
+
+A thing to consider is the memory usage. Sambamba will not use more than
+3 gigabyte of memory on its default settings. Broad institute runs Picard
+MarkDuplicates on VMs with 7 GB.
+
+Another thing to consider is that Picard outputs a metrics file stating how
+many reads were marked as duplicate.
+
+It is not a decisive win for any application.
+
+======= ====== =============== ================
+.       Picard sambamba 1 core sambamba 2 cores
+======= ====== =============== ================
+cores   1      1               2
+memory  7G     3G              3G
+time    74s    84s             51s
+metrics yes    no              no
+======= ====== =============== ================
 
 Merging BAM files
 +++++++++++++++++
