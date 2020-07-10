@@ -412,6 +412,33 @@ CPU time/ wall clock time is still less than 3. So it is not possible to fully
 utilize the 4 threads. Requiring heavier compression does not increase
 thread utilization.
 
+Since x threads do not utilize x cores, we can see what the effect would be
+if we run sambamba with x threads on a 2-core machine by using taskset.
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 "taskset -c 0,1 singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 1 -l 1 test.bam markdup.bam"
+    Benchmark #1: taskset -c 0,1 singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 1 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     81.394 s ±  0.252 s    [User: 78.575 s, System: 1.279 s]
+      Range (min … max):   81.172 s … 81.828 s    5 runs
+
+    $ hyperfine -w 2 -r 5 "taskset -c 0,1 singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 2 -l 1 test.bam markdup.bam"
+    Benchmark #1: taskset -c 0,1 singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 2 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     48.222 s ±  0.125 s    [User: 80.145 s, System: 1.734 s]
+      Range (min … max):   48.091 s … 48.380 s    5 runs
+
+    $ hyperfine -w 2 -r 5 "taskset -c 0,1 singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 3 -l 1 test.bam markdup.bam"
+    Benchmark #1: taskset -c 0,1 singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 3 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     45.894 s ±  0.230 s    [User: 79.484 s, System: 1.940 s]
+      Range (min … max):   45.651 s … 46.204 s    5 runs
+
+    $ hyperfine -w 2 -r 5 "taskset -c 0,1 singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 4 -l 1 test.bam markdup.bam"
+    Benchmark #1: taskset -c 0,1 singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 4 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     47.583 s ±  0.085 s    [User: 80.978 s, System: 2.030 s]
+      Range (min … max):   47.455 s … 47.666 s    5 runs
+
+We can see that using 3 threads on 2 cores leads to te lowest wall clock time.
+Being able to better utilize the CPU resources.
 
 Conclusion
 ..........
