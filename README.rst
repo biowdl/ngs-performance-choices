@@ -440,6 +440,59 @@ if we run sambamba with x threads on a 2-core machine by using taskset.
 We can see that using 3 threads on 2 cores leads to te lowest wall clock time.
 Being able to better utilize the CPU resources.
 
+Xeon server results
+...................
+
+Picard
+.. code-block::
+
+    Intel compression level 5
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=5 METRICS_FILE=markdup.metrics' && stat -c %s markdup.bam | numfmt --to=iec-i
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=5 METRICS_FILE=markdup.metrics
+    Time (mean ± σ):     202.168 s ±  6.038 s    [User: 241.791 s, System: 8.639 s]
+      Range (min … max):   191.935 s … 207.536 s    5 runs
+    711Mi
+
+    Intel compression level 1
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=1 METRICS_FILE=markdup.metrics' && stat -c %s markdup.bam | numfmt --to=iec-i
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=1 METRICS_FILE=markdup.metrics
+      Time (mean ± σ):     112.341 s ±  4.293 s    [User: 159.056 s, System: 7.862 s]
+      Range (min … max):   106.777 s … 117.376 s    5 runs
+    960Mi
+
+    Intel compression level 2
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=2 METRICS_FILE=markdup.metrics' && stat -c %s markdup.bam | numfmt --to=iec-i
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=2 METRICS_FILE=markdup.metrics
+      Time (mean ± σ):     124.673 s ±  6.990 s    [User: 167.482 s, System: 11.114 s]
+      Range (min … max):   112.443 s … 129.351 s    5 runs
+    960Mi
+
+    Intel compression level 3
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=3 METRICS_FILE=markdup.metrics' && stat -c %s markdup.bam | numfmt --to=iec-i
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=3 METRICS_FILE=markdup.metrics
+      Time (mean ± σ):     163.478 s ±  5.353 s    [User: 204.590 s, System: 8.764 s]
+      Range (min … max):   160.655 s … 173.039 s    5 runs
+      Warning: Statistical outliers were detected. Consider re-running this benchmark on a quiet PC without any interferences from other programs. It might help to use the '--warmup' or '--prepare' options.
+    742Mi
+
+    JDK level 1
+     hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=1 METRICS_FILE=markdup.metrics USE_JDK_INFLATER=true USE_JDK_DEFLATER=true' && stat -c %s markdup.bam | numfmt --to=iec-i
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=1 METRICS_FILE=markdup.metrics USE_JDK_INFLATER=true USE_JDK_DEFLATER=true
+      Time (mean ± σ):     147.671 s ±  5.456 s    [User: 194.152 s, System: 8.623 s]
+      Range (min … max):   141.741 s … 156.001 s    5 runs
+    765Mi
+
+sambamba
+
+.. code-block::
+
+    hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 1 -l 1 test.bam markdup.bam"  && stat -c %s markdup.bam | numfmt --to=iec-i
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/sambamba:0.7.1--h148d290_2 sambamba markdup -t 1 -l 1 test.bam markdup.bam
+      Time (mean ± σ):     143.724 s ±  1.610 s    [User: 136.320 s, System: 4.303 s]
+      Range (min … max):   141.083 s … 145.420 s    5 runs
+
+    766Mi
+
 Conclusion
 ..........
 Using picard with compression level 1 and defaults will yield a very big file
