@@ -219,16 +219,6 @@ sorting and should therefore not be considered.
 
 How much threads should be used?
 --------------------------------
-Samtools works with additional threads.
-
-0
-
-.. code-block::
-
-    $ hyperfine -w 2 -r 5 "singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@0 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'"
-    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/samtools:1.10--h9402c20_2 bash -c 'samtools sort -@0 -m 128M -l 1 -o test.bam unsorted.bam && samtools index test.bam test.bai'
-      Time (mean ± σ):     42.022 s ±  0.319 s    [User: 38.012 s, System: 1.860 s]
-      Range (min … max):   41.720 s … 42.539 s    5 runs
 
 1
 
@@ -260,8 +250,7 @@ Samtools works with additional threads.
 
 
 Using additional threads decreases the wall clock time but increases the total
-CPU time. Since the samtools program will be used in a pipe with an alignment
-program it is best to use ``-@0`` to prevent overhead.
+CPU time.
 
 How much memory should be used?
 -------------------------------
@@ -348,15 +337,24 @@ same filesize as sambamba.
 This generates files of 765M which is virtually the same as the 766M
 by sambamba. But compute time  for picard (74 vs 89) is better.
 
-If you feel better using the intel deflater and inflater compression level 2
+If you feel better using the intel deflater and inflater compression level 3
 yields similar results.
 
 .. code-block::
 
-    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=2 METRICS_FILE=markdup.metrics USE_JDK_DEFLATER=true' && du -h markdup.bam
-    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=2 METRICS_FILE=markdup.metrics USE_JDK_DEFLATER=true
-      Time (mean ± σ):     68.826 s ±  0.253 s    [User: 76.825 s, System: 1.342 s]
-      Range (min … max):   68.551 s … 69.171 s    5 runs
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=2 METRICS_FILE=markdup.metrics' && du -h markdup.bam
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=2 METRICS_FILE=markdup.metrics
+      Time (mean ± σ):     47.503 s ±  0.661 s    [User: 54.885 s, System: 1.463 s]
+      Range (min … max):   46.647 s … 48.283 s    5 runs
+
+    960M	markdup.bam
+
+    $ hyperfine -w 2 -r 5 'singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=3 METRICS_FILE=markdup.metrics' && du -h markdup.bam
+    Benchmark #1: singularity exec -eip docker://quay.io/biocontainers/picard:2.23.1--h37ae868_0 picard -Xmx4G -XX:ParallelGCThreads=1 MarkDuplicates INPUT=test.bam OUTPUT=markdup.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT COMPRESSION_LEVEL=3 METRICS_FILE=markdup.metrics
+      Time (mean ± σ):     76.495 s ±  0.268 s    [User: 85.189 s, System: 1.381 s]
+      Range (min … max):   76.171 s … 76.848 s    5 runs
+
+    742M	markdup.bam
 
 It is slightly slower 77 vs 74 seconds with a slightly smaller bam file 753M vs 765M.
 
