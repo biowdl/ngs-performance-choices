@@ -433,3 +433,38 @@ Test results
       Time (mean ± σ):     91.850 s ±  1.192 s    [User: 87.480 s, System: 2.778 s]
       Range (min … max):   90.252 s … 93.187 s    5 runs
 
+
+Alignment with BWA
++++++++++++++++++++
+
+To pipe or not to pipe?
+-----------------------
+
+Scripts
+-------
+
+Test results
+------------
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 10 'bash bwa_no_pipes.sh'
+    Benchmark #1: bash bwa_no_pipes.sh
+      Time (mean ± σ):     205.159 s ±  1.112 s    [User: 1186.185 s, System: 8.004 s]
+      Range (min … max):   203.323 s … 206.748 s    10 runs
+
+    $ du -h ramdisk/*
+    435M	ramdisk/no_pipes.aln.bam
+    2,4G	ramdisk/no_pipes.postalt.sam
+    2,2G	ramdisk/no_pipes.sam
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 10 'bash bwa_with_pipes.sh'
+    Benchmark #1: bash bwa_with_pipes.sh
+      Time (mean ± σ):     171.717 s ±  0.520 s    [User: 1240.633 s, System: 9.746 s]
+      Range (min … max):   170.844 s … 172.695 s    10 runs
+
+    $ du -h ramdisk/with_pipes.aln.bam
+    435M	ramdisk/with_pipes.aln.bam
+
