@@ -554,15 +554,34 @@ Alignment with BWA
 To pipe or not to pipe?
 -----------------------
 
+Pipes can be used to couple BWA with the postalt.js script and samtools sort
+in order to let the alignment process output a sorted BAM file. This massively
+limits the amount of files written to disk which is a great advantage.
+
+A disadvantage of pipes is that they are blocking when read while empty or
+while written and full. The default pipe size on Linux is 64K. It is possible
+for a pipe to get clogged up repeatedly and thus lengthen computation time.
+
 Scripts
 -------
+These scripts were used:
 
++ 8 cores BWA, postalt script, samtools sort 3 cores. Sequentially.
++ 8 cores BWA, postalt script, samtools sort 3 cores. Pipes.
++ 8 cores BWA, postalt script, samtools sort 3 cores. Named pipes.
++ 8 cores BWA, postalt script, samtools sort 3 cores. Named pipes altered with
+  [mkbigfifo](https://github.com/biowdl/mkbigfifo).
++ 12 cores BWA, postalt script, samtools sort 4 cores. Sequentially.
++ 12 cores BWA, postalt script, samtools sort 4 cores. Pipes.
++ 12 cores BWA, postalt script, samtools sort 4 cores. Named pipes.
++ 12 cores BWA, postalt script, samtools sort 4 cores. Named pipes altered with
+  [mkbigfifo](https://github.com/biowdl/mkbigfifo).
 Test results
 ------------
 
 .. code-block::
 
-    $ hyperfine -w 2 -r 10 'bash bwa_no_pipes.sh'
+    $ hyperfine -w 2 -r 10 'bash bwa_no_pipes_8cores.sh'
     Benchmark #1: bash bwa_no_pipes.sh
       Time (mean ± σ):     205.159 s ±  1.112 s    [User: 1186.185 s, System: 8.004 s]
       Range (min … max):   203.323 s … 206.748 s    10 runs
@@ -574,7 +593,7 @@ Test results
 
 .. code-block::
 
-    $ hyperfine -w 2 -r 10 'bash bwa_with_pipes.sh'
+    $ hyperfine -w 2 -r 10 'bash bwa_with_pipes_8cores.sh'
     Benchmark #1: bash bwa_with_pipes.sh
       Time (mean ± σ):     171.717 s ±  0.520 s    [User: 1240.633 s, System: 9.746 s]
       Range (min … max):   170.844 s … 172.695 s    10 runs
@@ -582,3 +601,54 @@ Test results
     $ du -h ramdisk/with_pipes.aln.bam
     435M	ramdisk/with_pipes.aln.bam
 
+.. code-block::
+
+    $ hyperfine -w 2 -r 10 'bash bwa_fifo_8cores.sh'
+    Benchmark #1: bash bwa_fifo_8cores.sh
+      Time (mean ± σ):     171.638 s ±  1.279 s    [User: 1247.522 s, System: 10.922 s]
+      Range (min … max):   170.079 s … 174.891 s    10 runs
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 10 'bash bwa_mkbigfifo_8cores.sh'
+    Benchmark #1: bash bwa_mkbigfifo_8cores.sh
+      Time (mean ± σ):     170.907 s ±  2.347 s    [User: 1240.188 s, System: 6.786 s]
+      Range (min … max):   168.868 s … 175.535 s    10 runs
+
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 10 'bash bwa_no_pipes_12cores.sh'
+    Benchmark #1: bash bwa_no_pipes_12cores.sh
+      Time (mean ± σ):     155.212 s ±  0.614 s    [User: 1271.680 s, System: 8.780 s]
+      Range (min … max):   154.406 s … 156.669 s    10 runs
+
+    $ du -h ramdisk/*
+    435M	ramdisk/no_pipes.aln.bam
+    2,4G	ramdisk/no_pipes.postalt.sam
+    2,2G	ramdisk/no_pipes.sam
+
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 10 'bash bwa_with_pipes_12cores.sh'
+    Benchmark #1: bash bwa_with_pipes_12cores.sh
+      Time (mean ± σ):     123.853 s ±  0.928 s    [User: 1295.435 s, System: 10.535 s]
+      Range (min … max):   122.943 s … 125.636 s    10 runs
+
+    $ du -h ramdisk/with_pipes.aln.bam
+    435M	ramdisk/with_pipes.aln.bam
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 10 'bash bwa_fifo_12cores.sh'
+    Benchmark #1: bash bwa_fifo_12cores.sh
+      Time (mean ± σ):     122.921 s ±  0.541 s    [User: 1288.907 s, System: 11.465 s]
+      Range (min … max):   122.244 s … 123.700 s    10 runs
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 10 'bash bwa_mkbigfifo_12cores.sh'
+    Benchmark #1: bash bwa_mkbigfifo_12cores.sh
+      Time (mean ± σ):     125.581 s ±  0.955 s    [User: 1303.329 s, System: 8.499 s]
+      Range (min … max):   123.360 s … 126.660 s    10 runs
