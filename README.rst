@@ -174,7 +174,7 @@ on a workstation which makes it easier to have apples-to-apples performance
 comparisons.
 
 Benchmarks
-..........
+----------
 To compare bwa and bwa-mem2 the reference genome for pipelines: `hg38 including
 alt contigs and hs38d1 decoy sequences
 <ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna.gz>`_
@@ -196,7 +196,9 @@ Bwa-mem2 comes with several executables, each optimized for a particular
 By default it chooses the fastest instruction set allowed by the CPU.
 These instruction sets allow fasts operations on vectors. Meaning that larger
 amounts of numbers can be manipulated at the same time for much less cost. The
-different instruction sets were benchmarked.
+different instruction sets were benchmarked. SSE4.1, SSE4.2, AVX and AVX2 were
+tested as these were supported by the used CPU for testing (AMD Ryzen 5 3600).
+AVX512 is only available on modern Intel CPUs and was not tested.
 
 Bwa-mem2 is provided as both source and as binaries on its github page.
 The binaries are compiled using the Intel C compiler. `This compiler has
@@ -204,12 +206,125 @@ been known to deliberately reduce performance on non-Intel CPU's
 <https://en.wikipedia.org/wiki/Intel_C%2B%2B_Compiler#Reception>`_. It is also
 proprietary. Therefore the `bioconda distribution
 <http://bioconda.github.io/recipes/bwa-mem2/README.html>_` uses the GNU
-compiler collection. Both Intel and GNU compiled binaries were tested.
+compiler collection. Both Intel and GNU compiled binaries were tested. Also
+the source was compiled locally using GCC and AOCC (`AMD Optimizing C Compiler
+<https://developer.amd.com/amd-aocc/>`_) to see how much value was added by
+local compilation.
+
+Versions used were BWA 0.7.17 and bwa-mem2 2.1
 
 Test results
 ............
 
+The baseline is BWA. This uses slightly over 6 GB in memory (6.3 GB).
 
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 'bwa mem -t 8 -o ramdisk/bwa-mem.sam GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa mem -t 8 -o ramdisk/bwa-mem.sam GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     179.499 s ±  0.700 s    [User: 1425.645 s, System: 3.179 s]
+      Range (min … max):   179.042 s … 180.719 s    5 runs
+
+bwa-mem2 uses almost 19GB (18.9 GB) maximum which is approximately 3 times the
+memory used in BWA. Below follow the GNU Compiler compiled binary results.
+Note how the instruction sets have a big impact on performance. They are
+ordered from older to newer.
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2.sse41 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2.sse41 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     139.950 s ±  4.528 s    [User: 974.764 s, System: 9.624 s]
+      Range (min … max):   136.166 s … 145.029 s    5 runs
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2.sse42 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2.sse42 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     124.358 s ±  0.194 s    [User: 881.606 s, System: 9.801 s]
+      Range (min … max):   124.187 s … 124.636 s    5 runs
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2.avx mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2.avx mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     115.176 s ±  0.594 s    [User: 807.904 s, System: 9.872 s]
+      Range (min … max):   114.439 s … 116.068 s    5 runs
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2.avx2 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2.avx2 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     96.902 s ±  0.184 s    [User: 662.478 s, System: 9.813 s]
+      Range (min … max):   96.756 s … 97.118 s    5 runs
+
+Below are the results using the binaries found on the bwa-mem2 github page.
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2-2.1_x64-linux/bwa-mem2.sse41 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2-2.1_x64-linux/bwa-mem2.sse41 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     124.173 s ±  0.089 s    [User: 874.309 s, System: 9.747 s]
+      Range (min … max):   124.056 s … 124.292 s    5 runs
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2-2.1_x64-linux/bwa-mem2.sse42 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2-2.1_x64-linux/bwa-mem2.sse42 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     121.848 s ±  0.966 s    [User: 856.020 s, System: 9.917 s]
+      Range (min … max):   121.142 s … 123.442 s    5 runs
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2-2.1_x64-linux/bwa-mem2.avx mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2-2.1_x64-linux/bwa-mem2.avx mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     111.642 s ±  0.145 s    [User: 774.780 s, System: 9.681 s]
+      Range (min … max):   111.502 s … 111.861 s    5 runs
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2-2.1_x64-linux/bwa-mem2.avx2 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2-2.1_x64-linux/bwa-mem2.avx2 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     93.252 s ±  0.477 s    [User: 626.916 s, System: 10.021 s]
+      Range (min … max):   92.757 s … 93.881 s    5 runs
+
+Compiled on the test machine using GCC:
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2-source/bwa-mem2.avx2 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2-source/bwa-mem2.avx2 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     95.301 s ±  0.446 s    [User: 645.498 s, System: 9.800 s]
+      Range (min … max):   94.923 s … 95.942 s    5 runs
+
+Compiled on the test machine using AOCC:
+
+.. code-block::
+
+    $ hyperfine -w 2 -r 5 'bwa-mem2-source/bwa-mem2.avx2 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq'
+    Benchmark #1: bwa-mem2-source/bwa-mem2.avx2 mem -t 8 -o ramdisk/bwa-mem2.sam bwa-mem2/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna ../big2.fastq
+      Time (mean ± σ):     91.842 s ±  0.105 s    [User: 618.004 s, System: 9.729 s]
+      Range (min … max):   91.685 s … 91.961 s    5 runs
+
+Relative performances
+.....................
+Relative time to completion of executables distributed on bioconda.
+(Compiled using GCC). Lower is better
+
+=============== ========
+program         bioconda
+=============== ========
+BWA             100.00%
+bwa-mem2.sse41  77.97%
+bwa-mem2.sse42  69.22%
+bwa-mem2.avx    64.16%
+bwa-mem2.avx2   53.98%
+=============== ========
+
+Relative time to completion of bwa-mem2 given compilation methods.
+This only compares the fastest AVX 2 method.
+
+=================================== =====================
+method                              relative time
+=================================== =====================
+Conda distributed (GCC-compiled)    100.00%
+Github distributed (ICPC-compiled)  96.23%
+Compiled locally (GCC)              98.35%
+Compiled locally (AOCC)             94.78%
+=================================== =====================
+
+Conclusion
+----------
+Bwa-mem2 delivers a substantial decrease in time to completion for a three-fold
+increase in memory use.
 
 Sorting tools
 +++++++++++++
