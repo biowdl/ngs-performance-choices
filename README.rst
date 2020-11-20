@@ -149,6 +149,67 @@ The default compression should be level 1. What we see in for example ``Picard
 Markduplicates`` is that the execution time is halved when compression level
 is set from 5 (default) to 1.
 
+Alignment tools
++++++++++++++++
+
+DNA Alignment
+-------------
+For short read DNA alignment, `BWA <https://github.com/lh3/bwa>`_ has been the
+tool of choice. It is used by many insitutions as the go to standard.
+
+When evaluating the performance of `BIOWDL's germline-DNA pipeline
+<https://github.com/biowdl/germline-DNA>`_, it was found that the alignment step
+using BWA takes ~50% of the wall-clock time and 70% of the compute time. This
+was *after* all the remaing steps in the pipeline had optimized compression
+levels. Alignment is by far the most expensive step. The reason that the wall
+clock time is less than the compute time is that the task can be parallelized
+very well with virtually no loss of efficiency.
+
+To solve the long alignment times a new tool has come along: `bwa-mem2
+<https://github.com/bwa-mem2/bwa-mem2>`_. It promises to deliver increased
+speeds at the cost of an increase in memory. This increase in memory was quite
+substantial (10x) but since bwa-mem2 2.1 the increase has been reduced to 3x.
+It has this been more viable for use generally, and can now be tested locally
+on a workstation which makes it easier to have apples-to-apples performance
+comparisons.
+
+Benchmarks
+..........
+To compare bwa and bwa-mem2 the reference genome for pipelines: `hg38 including
+alt contigs and hs38d1 decoy sequences
+<ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna.gz>`_
+was used. It is provided by the `NCBI's ftp site
+<ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/>`_
+. The `BWA index can also be downloaded from that page
+<ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_full_plus_hs38d1_analysis_set.fna.bwa_index.tar.gz>`_.
+The index for bwa-mem2 was generated from the fasta file, with the ``.alt``
+index file from the bwa index (it's compatible).
+
+The input FASTQ file was a 5 million record FASTQ file from the Genome in a
+bottle sample with read length 150. For a total of 1,6 GB. The file was
+uncompressed and stored on a NVME SSD drive. The indexes were stored on the
+same drive. The output was written as uncompressed SAM to a in-memory disk of
+4GB.
+
+Bwa-mem2 comes with several executables, each optimized for a particular
+`instruction set <https://en.wikipedia.org/wiki/Streaming_SIMD_Extensions>`_.
+By default it chooses the fastest instruction set allowed by the CPU.
+These instruction sets allow fasts operations on vectors. Meaning that larger
+amounts of numbers can be manipulated at the same time for much less cost. The
+different instruction sets were benchmarked.
+
+Bwa-mem2 is provided as both source and as binaries on its github page.
+The binaries are compiled using the Intel C compiler. `This compiler has
+been known to deliberately reduce performance on non-Intel CPU's
+<https://en.wikipedia.org/wiki/Intel_C%2B%2B_Compiler#Reception>`_. It is also
+proprietary. Therefore the `bioconda distribution
+<http://bioconda.github.io/recipes/bwa-mem2/README.html>_` uses the GNU
+compiler collection. Both Intel and GNU compiled binaries were tested.
+
+Test results
+............
+
+
 
 Sorting tools
 +++++++++++++
