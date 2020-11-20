@@ -169,7 +169,7 @@ To solve the long alignment times a new tool has come along: `bwa-mem2
 <https://github.com/bwa-mem2/bwa-mem2>`_. It promises to deliver increased
 speeds at the cost of an increase in memory. This increase in memory was quite
 substantial (10x) but since bwa-mem2 2.1 the increase has been reduced to 3x.
-It has this been more viable for use generally, and can now be tested locally
+It is therefore more viable for use generally, and can now be tested locally
 on a workstation which makes it easier to have apples-to-apples performance
 comparisons.
 
@@ -345,8 +345,10 @@ less than 2%. Using a proprietary compiler that was optimized by the CPU vendor
 The bioconda distribution comes with numerous advantages such as an open
 toolchain and automatic update of a biocontainer for reproducibility purposes.
 It is debatable whether small performance increases due to using better
-compilers are worth losing these perks. This may differ on other types of
-processors used.
+compilers are worth losing these perks.
+
+These conclusions apply mostly to the tested platform (AMD Ryzen 5 3600) and
+other processors may yield different results.
 
 Sorting tools
 +++++++++++++
