@@ -299,18 +299,18 @@ Relative performances
 Relative time to completion of executables distributed on bioconda.
 (Compiled using GCC). Lower is better
 
-=============== ========
-program         bioconda
-=============== ========
+=============== ==============
+program         relative time
+=============== ==============
 BWA             100.00%
 bwa-mem2.sse41  77.97%
 bwa-mem2.sse42  69.22%
 bwa-mem2.avx    64.16%
 bwa-mem2.avx2   53.98%
-=============== ========
+=============== ==============
 
 Relative time to completion of bwa-mem2 given compilation methods.
-This only compares the fastest AVX 2 method.
+This only compares bwa-mem2.avx2 as it was the fastest on the test system.
 
 =================================== =====================
 method                              relative time
@@ -323,8 +323,30 @@ Compiled locally (AOCC)             94.78%
 
 Conclusion
 ----------
-Bwa-mem2 delivers a substantial decrease in time to completion for a three-fold
-increase in memory use.
+Bwa-mem2 2.1 delivers a substantial decrease in time to completion for a
+three-fold increase in memory use. The three-fold increase in memory seems big
+but for the human genome this means going from 6.3 to 19 GB of memory usage.
+Given the circumstances in which bwa-mem2 is most practical (8 threads or
+higher for WGS samples) the core-to-thread ratio of 2.5G or lower per thread
+is very reasonable.
+
+Bwa-mem2 successfully utilizes SIMD instructions which means that it performs
+much better on more modern architectures. However this should also be in reach
+for most institutions as AVX2 was introduced with Intel's Haswell architecture
+in 2013. AVX512 could not be benchmarked on the test machine. It was introduced
+in Skylake architecture server processors in 2017.
+
+The bwa-mem2 README's claim that the Intel-compiled binaries perform better is
+verified even on this AMD test machine. However, the improvement is about 4%.
+Compiling locally using an open-source compiler gives a smaller improvement of
+less than 2%. Using a proprietary compiler that was optimized by the CPU vendor
+(AMD) led to a performance increase of 5%. These percentages are very small.
+
+The bioconda distribution comes with numerous advantages such as an open
+toolchain and automatic update of a biocontainer for reproducibility purposes.
+It is debatable whether small performance increases due to using better
+compilers are worth losing these perks. This may differ on other types of
+processors used.
 
 Sorting tools
 +++++++++++++
